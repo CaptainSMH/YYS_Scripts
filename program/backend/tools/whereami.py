@@ -19,9 +19,11 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+import game.pages  # noqa: F401  触发页面注册
 from core.config import instances, paths, templates
 from core.device.base import DeviceError
 from core.device.desktop import DesktopDevice
+from core.page import registry
 from core.vision import match
 from tools.list_windows import pad
 
@@ -70,6 +72,27 @@ def main(argv: list[str]) -> int:
     height, width = frame.shape[:2]
     print(f"画面  {width}x{height}   来源 {source}")
     print()
+
+    # ---- 页面判定 ----
+    results = registry.evaluate(frame)
+    if results:
+        best = registry.detect(frame, results)
+        if best is None:
+            print("页面判定  未知（没有任何页面的锚点全部命中）")
+            for result in results:
+                failed = [a for a in result.anchors if not a.ok]
+                detail = "，".join(
+                    f"{a.anchor} {a.score:.3f} < {a.threshold:.2f}" for a in failed
+                )
+                print(f"  {result.page.key:<10} 未通过：{detail}")
+        else:
+            print(f"页面判定  {best.key}（优先级 {best.priority}）")
+            for anchor in best.result.anchors:
+                print(
+                    f"  锚点 {pad(anchor.anchor, 18)}"
+                    f"{anchor.score:.3f} ≥ {anchor.threshold:.2f}  OK"
+                )
+        print()
 
     hits = 0
     missing = 0
