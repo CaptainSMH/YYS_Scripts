@@ -16,7 +16,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 import game.pages  # noqa: F401  触发页面注册
@@ -25,7 +24,8 @@ from core.device.base import DeviceError
 from core.device.desktop import DesktopDevice
 from core.page import registry
 from core.vision import match
-from tools.list_windows import pad
+from core.vision.io import load_image
+from tools._console import pad
 
 
 def _arg(argv: list[str], flag: str) -> str | None:
@@ -44,7 +44,7 @@ def load_frame(argv: list[str]) -> tuple[np.ndarray, str]:
         path = Path(file)
         if not path.is_absolute():
             path = paths.PROJECT_ROOT / path
-        frame = cv2.imdecode(np.fromfile(str(path), np.uint8), cv2.IMREAD_COLOR)
+        frame = load_image(path)
         if frame is None:
             raise DeviceError(f"读不了这张图：{path}")
         return frame, paths.rel(path)
@@ -103,7 +103,7 @@ def main(argv: list[str]) -> int:
             missing += 1
             continue
 
-        image = cv2.imdecode(np.fromfile(str(path), np.uint8), cv2.IMREAD_COLOR)
+        image = load_image(path)
         if image is None:
             print(f"  {pad(item.key, 26)}模板图读不了  {paths.rel(path)}")
             missing += 1

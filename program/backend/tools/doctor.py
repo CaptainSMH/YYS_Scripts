@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import ctypes
 import sys
-import unicodedata
 from importlib import metadata
 
 from core.config import paths
+from tools._console import pad
 
 # 需要检查的第三方包（显示名 -> 发行名）
 _REQUIRED_PACKAGES = {
@@ -19,12 +19,6 @@ _REQUIRED_PACKAGES = {
     "opencv-python-headless": "opencv-python-headless",
     "PyYAML": "pyyaml",
 }
-
-
-def _pad(text: str, width: int) -> str:
-    """按显示宽度左对齐补空格（中文算 2 个宽度）。"""
-    shown = sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in text)
-    return text + " " * max(0, width - shown)
 
 
 def _is_admin() -> bool:
@@ -46,7 +40,7 @@ def main() -> int:
     label_width = 24
 
     def line(label: str, value: str) -> None:
-        print(f"{_pad(label, label_width)}: {value}")
+        print(f"{pad(label, label_width)}: {value}")
 
     print("=" * 60)
     print("环境自检")
@@ -79,16 +73,19 @@ def main() -> int:
     # ---- 路径
     print("-" * 60)
     line("项目根", str(paths.PROJECT_ROOT))
-    for name in ("ASSETS_DIR", "CONFIGS_DIR", "TEMPLATES_DIR", "ARTIFACTS_DIR"):
+    for name in ("ASSETS_DIR", "PAGES_DIR", "CONFIGS_DIR", "ARTIFACTS_DIR"):
         path = getattr(paths, name)
         line(name, f"{'存在' if path.exists() else '不存在（需要时创建）'}  {paths.rel(path)}")
+
+    page_names = sorted(child.name for child in paths.PAGES_DIR.iterdir() if child.is_dir()) if paths.PAGES_DIR.exists() else []
+    line("页面", "、".join(page_names) if page_names else "（还没有）")
 
     # ---- 权限
     print("-" * 60)
     admin = _is_admin()
     line("管理员权限", "是" if admin else "否")
     if not admin:
-        print(f"{_pad('', label_width)}  截图/识别可用；点击需要以管理员身份运行")
+        print(f"{pad('', label_width)}  截图/识别可用；点击需要以管理员身份运行")
 
     # ---- 结论
     print("=" * 60)

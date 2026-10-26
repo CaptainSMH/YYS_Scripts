@@ -23,6 +23,7 @@ from pathlib import Path
 import yaml
 
 from core.config import paths
+from core.vision import io
 
 MANIFEST_NAME = "templates.yaml"
 
@@ -118,20 +119,8 @@ def load_page(page: str) -> list[Template]:
 
 
 def save_image(page: str, name: str, image) -> Path:
-    """把模板图写进该页面文件夹，返回文件路径。
-
-    用 cv2.imencode + tofile 而不是 imwrite——后者在 Windows 上不支持中文路径。
-    """
-    import cv2
-    import numpy as np
-
-    target = paths.page_dir(page) / f"{name}.png"
-    paths.ensure_dir(target.parent)
-    ok, buffer = cv2.imencode(".png", image)
-    if not ok:
-        raise ValueError("PNG 编码失败")
-    buffer.tofile(str(target))
-    return target
+    """把模板图写进该页面文件夹，返回文件路径。"""
+    return io.save_image(paths.page_dir(page) / f"{name}.png", image)
 
 
 def save_page(page: str, items: list[Template]) -> Path:

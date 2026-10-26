@@ -22,14 +22,14 @@ import tkinter as tk
 from dataclasses import replace
 from tkinter import messagebox, simpledialog, ttk
 
-import cv2
 import numpy as np
 
 from core.config import instances, paths, templates
 from core.device.base import DeviceError
 from core.device.desktop import DesktopDevice
 from core.vision import match
-from core.vision.roi import expand_roi, pixels_to_roi, roi_to_pixels
+from core.vision.io import load_image, save_image
+from core.vision.roi import clamp_box, expand_roi, pixels_to_roi, roi_to_pixels
 
 HANDLE_TOL = 6  # 判定「点在框内」的容差（像素）
 MIN_BOX = 8
@@ -259,8 +259,8 @@ class Workbench:
             return
 
         preview = self.frame if self.scale == 1 else self.frame[:: self.scale, :: self.scale]
-        temp = paths.ensure_dir(paths.ARTIFACTS_DIR / "workbench") / "preview.png"
-        cv2.imencode(".png", preview)[1].tofile(str(temp))
+        temp = paths.ARTIFACTS_DIR / "workbench" / "preview.png"
+        save_image(temp, preview)
         self.photo = tk.PhotoImage(file=str(temp))
         self.canvas.create_image(0, 0, anchor="nw", image=self.photo)
         self.canvas.config(width=preview.shape[1], height=preview.shape[0])
@@ -333,11 +333,15 @@ class Workbench:
         height, width = self.frame.shape[:2]
 
         if self._drag_mode == "new":
-            self.box = (
-                int(max(0, min(self._start[0], px))),
-                int(max(0, min(self._start[1], py))),
-                int(min(width, max(self._start[0], px))),
-                int(min(height, max(self._start[1], py))),
+            self.box = clamp_box(
+                (
+                    int(min(self._start[0], px)),
+                    int(min(self._start[1], py)),
+                    int(max(self._start[0], px)),
+                    int(max(self._start[1], py)),
+                ),
+                width,
+                height,
             )
         elif self._origin_box is not None:
             dx, dy = px - self._start[0], py - self._start[1]
@@ -364,7 +368,7 @@ class Workbench:
             # 选中的是页面节点，不是模板
             self.status.config(text="（这是页面文件夹，展开选里面的模板）")
             return
-        image = cv2.imdecode(np.fromfile(str(item.image_path), np.uint8), cv2.IMREAD_COLOR)
+        image = load_image(item.image_path)
         if image is None:
             messagebox.showerror("读图失败", f"找不到模板图：{item.image_path}", parent=self.root)
             return

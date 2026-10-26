@@ -20,7 +20,8 @@ import sys
 from core.config import instances, paths
 from core.device.base import WindowNotFound
 from core.device.desktop import WindowInfo, find_window, list_game_windows
-from tools.list_windows import pad, render_table
+from tools._console import pad
+from tools.list_windows import render_table
 
 
 def show_all() -> None:

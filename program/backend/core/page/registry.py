@@ -16,12 +16,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import cv2
 import numpy as np
 
 from core.config import templates
 from core.page.base import Page
 from core.vision import match
+from core.vision.io import load_image
 
 _REGISTRY: dict[str, type[Page]] = {}
 
@@ -91,20 +91,12 @@ class PageMatch:
 
 # ---------------------------------------------------------------- 判定
 
-def _load_image(path) -> np.ndarray | None:
-    data = np.fromfile(str(path), np.uint8)
-    if data.size == 0:
-        return None
-    return cv2.imdecode(data, cv2.IMREAD_COLOR)
-
-
 def evaluate(frame: np.ndarray) -> list[PageResult]:
     """逐页检查锚点，返回每个页面的判定细节（不管成不成立）。"""
     results: list[PageResult] = []
     for page_cls in pages():
         result = PageResult(page=page_cls)
-        for anchor in page_cls.anchors:
-            key = f"{page_cls.page}/{anchor}"
+        for anchor, key in zip(page_cls.anchors, page_cls.anchor_keys()):
             item = templates.find(key)
             if item is None:
                 # 模板缺失：记 0 分、位置 None，锚点判为不通过
@@ -113,7 +105,7 @@ def evaluate(frame: np.ndarray) -> list[PageResult]:
                 )
                 continue
 
-            image = _load_image(item.image_path)
+            image = load_image(item.image_path)
             if image is None:
                 result.anchors.append(
                     AnchorResult(

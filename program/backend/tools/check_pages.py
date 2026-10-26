@@ -21,7 +21,7 @@ import sys
 import game.pages  # noqa: F401  触发页面注册
 from core.config import templates
 from core.page.registry import pages
-from tools.list_windows import pad
+from tools._console import pad
 
 
 def _check_template(key: str, referenced: set[str], problems: list[str]) -> str:

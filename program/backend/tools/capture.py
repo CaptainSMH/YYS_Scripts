@@ -16,24 +16,16 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import cv2
 
 from core.config import instances, paths
 from core.device.base import DeviceError
 from core.device.desktop import DesktopDevice
+from core.vision.io import save_image
 
 
 def save_png(path: Path, frame) -> None:
-    """保存 PNG。
-
-    不用 cv2.imwrite：它在 Windows 上不支持中文路径，
-    而我们的实例名、产物目录都可能是中文。
-    """
-    ok, buffer = cv2.imencode(".png", frame)
-    if not ok:
-        raise DeviceError("PNG 编码失败")
-    paths.ensure_dir(path.parent)
-    buffer.tofile(str(path))
+    """保存 PNG 截图。"""
+    save_image(path, frame)
 
 
 def _arg(argv: list[str], flag: str) -> str | None:

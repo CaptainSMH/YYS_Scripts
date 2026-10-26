@@ -7,18 +7,9 @@
 from __future__ import annotations
 
 import sys
-import unicodedata
 
 from core.device.desktop import WindowInfo, list_game_windows
-
-
-def display_width(text: str) -> int:
-    """按显示宽度算字符串长度（中文占 2 格）。"""
-    return sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in text)
-
-
-def pad(text: str, width: int) -> str:
-    return text + " " * max(0, width - display_width(text))
+from tools._console import pad
 
 
 def render_table(windows: list[WindowInfo]) -> list[str]:
