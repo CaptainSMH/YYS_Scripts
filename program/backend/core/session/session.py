@@ -22,6 +22,7 @@ import cv2
 import numpy as np
 
 from core.config import templates
+from core.config.errors import TemplateImageMissing, TemplateMissing, TemplateRoiInvalid
 from core.device.base import Device, DeviceError
 from core.humanize import point_in_box
 from core.humanize import hold as humanize_hold
@@ -49,13 +50,13 @@ class SessionError(RuntimeError):
 class PageTimeout(SessionError):
     """等到超时也没出现目标页面。"""
 
+    hint = "界面没切过去：点击可能没生效、游戏卡住了，或者 timeout 给得太短"
+
 
 class ElementNotFound(SessionError):
-    """元素没找到，或者得分低于阈值。"""
+    """画面里找不到目标元素（得分低于阈值）。"""
 
-
-class NotSupported(SessionError):
-    """当前页面没有这个能力（比如没有返回键）。"""
+    hint = "模板和画面不一致：可能不在这个界面、换了皮肤，或窗口尺寸变了"
 
 
 def _load_image(path) -> np.ndarray | None:
@@ -153,26 +154,28 @@ class Session:
     # ---------------------------------------------------------------- 元素
 
     def _locate_rect(self, element: El) -> tuple[int, int, int, int, float]:
-        """找到元素，返回它的矩形 (x1, y1, 宽, 高) 和得分。"""
+        """找到元素，返回它的矩形 (x1, y1, 宽, 高) 和得分。
+
+        配置问题（模板不存在、图片缺失、roi 非法）抛 ConfigError；
+        画面问题（得分不够）抛 ElementNotFound。两者处理方式完全不同。
+        """
         page_cls = owner_page(element)
         key = element.key(page_cls.page)
         item = templates.find(key)
         if item is None:
-            raise ElementNotFound(f"模板不存在：{key}")
+            raise TemplateMissing(f"模板清单里没有 {key}")
 
         image = _load_image(item.image_path)
         if image is None:
-            raise ElementNotFound(f"模板图读不出来：{item.image_path}")
+            raise TemplateImageMissing(f"读不出模板图：{item.image_path}")
 
         frame = self.shot()
         score, location = match.best_match(frame, image, item.roi)
         if location is None:
-            raise ElementNotFound(f"{key} 的 roi 比模板还小，检查 roi 配置")
+            raise TemplateRoiInvalid(f"{key} 的 roi 比模板图还小")
 
         if score < item.threshold:
-            raise ElementNotFound(
-                f"{key} 得分 {score:.3f} 低于阈值 {item.threshold:.2f}"
-            )
+            raise ElementNotFound(f"{key} 得分 {score:.3f} 低于阈值 {item.threshold:.2f}")
 
         height, width = image.shape[:2]
         return location[0], location[1], width, height, score

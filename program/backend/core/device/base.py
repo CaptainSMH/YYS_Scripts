@@ -19,17 +19,25 @@ import numpy as np
 class DeviceError(RuntimeError):
     """设备层所有异常的基类，上层可以只捕获这一个。"""
 
+    hint = "设备层操作失败：窗口、截图或点击出了问题"
+
 
 class WindowNotFound(DeviceError):
     """找不到目标窗口：游戏没开、标题变了、或窗口被关闭。"""
+
+    hint = "游戏没开，或者窗口标题变了——先看看游戏窗口还在不在"
 
 
 class BlackFrameError(DeviceError):
     """截到的画面无效（全黑或近乎纯色），不能交给识别层。"""
 
+    hint = "窗口可能最小化了，或者被完全遮住——把它还原到屏幕上再试"
+
 
 class NotElevatedError(DeviceError):
     """该操作需要管理员权限，但当前进程没有。"""
+
+    hint = "后台点击需要管理员权限——用 tools/runner 启动（它会自己提权）"
 
 
 # ---------------------------------------------------------------- 接口
