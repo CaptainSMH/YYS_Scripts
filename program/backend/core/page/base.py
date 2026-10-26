@@ -5,7 +5,7 @@
     2. 这个界面上有哪些东西可以点？   → 元素（El），供流程层引用
 
 元素引用的名字是「本页面文件夹里的模板名」：
-    HomePage.SHOP = El("shop")  →  assets/pages/home/shop.png
+    HomePage.SHOP = El("shop_entry")  →  assets/pages/home/shop_entry.png
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ class El:
     """给人看的说明。"""
 
     def key(self, page: str) -> str:
-        """完整模板 key，如 home/shop。"""
+        """完整模板 key，如 home/shop_entry。"""
         return f"{page}/{self.name}"
 
 
