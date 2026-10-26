@@ -109,3 +109,31 @@ def list_all() -> list[Instance]:
         if item is not None:
             result.append(item)
     return result
+
+
+class InstanceNotChosen(LookupError):
+    """没有明确指定实例，而现有配置又不唯一。"""
+
+
+def resolve(name: str | None = None) -> Instance:
+    """取一个实例配置。
+
+    name 为空时：只有恰好一个配置才会自动选中，否则抛 InstanceNotChosen，
+    避免多开场景下「悄悄用了别人的配置」。
+    """
+    if name:
+        item = load(name)
+        if item is None:
+            raise InstanceNotChosen(
+                f"没有找到实例 {name!r}，现有：{[i.name for i in list_all()] or '（无）'}"
+            )
+        return item
+
+    items = list_all()
+    if not items:
+        raise InstanceNotChosen("还没有任何实例配置，请先运行 python -m tools.pick_window")
+    if len(items) > 1:
+        raise InstanceNotChosen(
+            f"存在 {len(items)} 个实例配置，请用 --instance 指定一个：{[i.name for i in items]}"
+        )
+    return items[0]
