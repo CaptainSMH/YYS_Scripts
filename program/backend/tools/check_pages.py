@@ -21,6 +21,8 @@ import sys
 import game.pages  # noqa: F401  触发页面注册
 from core.config import templates
 from core.page.registry import pages
+from core.vision.io import load_image
+from core.vision.quality import contrast, is_textureless
 from tools._console import pad
 
 
@@ -34,6 +36,18 @@ def _check_template(key: str, referenced: set[str], problems: list[str]) -> str:
     if not item.image_path.exists():
         problems.append(f"{key}: 图片文件不存在 {item.file}")
         return "图片缺失"
+
+    image = load_image(item.image_path)
+    if image is None:
+        problems.append(f"{key}: 图片读不出来 {item.file}")
+        return "图片损坏"
+    if is_textureless(image):
+        problems.append(
+            f"{key}: 几乎是纯色（标准差 {contrast(image):.1f}），"
+            "会在任何画面上误匹配到 1.0，需要重新框选"
+        )
+        return "无纹理"
+
     return "OK"
 
 

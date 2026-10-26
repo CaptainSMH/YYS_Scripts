@@ -29,6 +29,7 @@ from core.device.base import DeviceError
 from core.device.desktop import DesktopDevice
 from core.vision import match
 from core.vision.io import load_image, save_image
+from core.vision.quality import contrast, is_textureless
 from core.vision.roi import clamp_box, expand_roi, pixels_to_roi, roi_to_pixels
 
 HANDLE_TOL = 6  # 判定「点在框内」的容差（像素）
@@ -415,6 +416,20 @@ class Workbench:
 
         x1, y1, x2, y2 = self.box
         crop = self.frame[y1:y2, x1:x2]
+
+        # 纯色区域做模板会「匹配到任何地方」（TM_CCOEFF_NORMED 的退化情况），
+        # 存下去只会在运行时静默点错位置，所以这里直接拦掉
+        if is_textureless(crop):
+            messagebox.showwarning(
+                "这块没有纹理",
+                f"框选区域的灰度标准差只有 {contrast(crop):.1f}，接近纯色。\n"
+                "这种模板在任何画面上都会被判为「完美匹配」，会点到错误的位置。\n"
+                "请框一个包含文字或图案的区域。",
+                parent=self.root,
+            )
+            self.clear_rect()
+            return
+
         height, width = self.frame.shape[:2]
         roi = expand_roi(self.box, width, height)
 

@@ -155,8 +155,23 @@ class Runner:
 
         try:
             item = instances.load(instance_name)
+        except OSError as exc:
+            messagebox.showerror("读不了实例配置", str(exc), parent=self.root)
+            return
+
+        if item is None:
+            # 配置文件可能在外部被删了，而下拉框还停在旧名字上
+            messagebox.showerror(
+                "实例配置不存在",
+                f"找不到实例 {instance_name!r} 的配置。\n点右上角的「清空日志」旁边重新选一个，或重启本工具。",
+                parent=self.root,
+            )
+            self.refresh_instances()
+            return
+
+        try:
             device = DesktopDevice(item.title_match, item.match_index)
-        except (DeviceError, OSError) as exc:
+        except DeviceError as exc:
             messagebox.showerror("找不到窗口", str(exc), parent=self.root)
             return
 
