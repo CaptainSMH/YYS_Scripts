@@ -133,46 +133,43 @@ flows  →  pages  →  core
 ## 4. 目录结构
 
 ```
-YYS_Scripts/
-├─ AGENTS.md                  # 工作区规矩
-├─ README.md                  # 项目简介、如何跑起来
-├─ CHANGELOG.md               # 每次适配游戏版本记一条
-├─ main.py                    # 入口：--instance 选实例、装配、跑任务
-├─ run_all.ps1                # 多开启动脚本（薄封装）
-├─ temp_scripts/              # 临时脚本（非正式结构）
-├─ core/                      # 与游戏无关
-│  ├─ device/                 #   base（抽象）/ desktop（窗口+后台点击）/ mumu / mock
-│  ├─ vision/                 #   模板匹配、OCR、几何换算
-│  ├─ page/                   #   Page 基类、El、Text、页面注册表、锚点冲突自检
-│  ├─ session/                #   ctx API：goto / tap / expect / wait_any / text
-│  ├─ recovery/               #   异常分类与恢复动作
-│  ├─ trace/                  #   结构化日志、截图落盘
-│  └─ config/                 #   配置加载与校验（pydantic）
-├─ game/                      # 与阴阳师相关
-│  ├─ pages/                  #   一屏一个文件
-│  ├─ flows/                  #   业务流程
-│  └─ recovery_rules.py       #   阴阳师特有的恢复规则
-├─ assets/
-│  ├─ templates/              #   模板图，按页面分目录
-│  └─ templates.yaml          #   模板清单（唯一索引）
-├─ configs/
-│  ├─ instances.yaml          #   实例列表：每个实例绑定哪个窗口
-│  ├─ device.yaml             #   设备通用参数：逻辑分辨率、点击模式
-│  └─ tasks.yaml              #   跑哪些任务、次数、停止条件
-├─ tests/
-│  ├─ screens/                #   历史截图，按分辨率分目录
-│  ├─ test_pages.py           #   回归：每张截图应识别出预期页面
-│  └─ test_geometry.py        #   坐标换算单元测试
-├─ tools/
-│  ├─ list_windows.py         #   枚举可见窗口
-│  ├─ pick_window.py          #   交互选窗并写入实例配置
-│  ├─ diagnose.py             #   P0 可行性实验：截图+点击+回读
-│  ├─ capture.py              #   截图存盘
-│  ├─ annotate.py             #   框选 → 生成模板 + 写清单
-│  └─ whereami.py             #   截图 → 报告当前页面
-├─ docs/                      #   本文档
-└─ artifacts/                 #   运行产物（不纳入版本管理）
+YYS_Scripts/                    # 仓库根（.git 在这里）
+├─ .gitignore                   # 忽略：temp_scripts / __pycache__ / artifacts / AGENTS.md
+├─ AGENTS.md                    # 工作区规矩（不纳入版本控制）
+├─ docs/
+│  └─ PROJECT.md                # 本文档
+└─ program/
+   ├─ backend/                  # ★ 代码根（.project-root 在这里）
+   │  ├─ .project-root          # 根标记：paths.py 靠它定位，勿删
+   │  ├─ .venv/                 # 虚拟环境（不纳入版本控制）
+   │  ├─ requirements.txt       # 依赖清单
+   │  ├─ core/                  # 与游戏无关
+   │  │  ├─ config/             #   路径解析（已实现）
+   │  │  ├─ device/             #   base（接口）/ desktop（Windows 实现）
+   │  │  ├─ vision/             #   模板匹配、OCR（待实现）
+   │  │  ├─ page/               #   页面基类、元素、注册表（待实现）
+   │  │  ├─ session/            #   ctx API（待实现）
+   │  │  ├─ recovery/           #   异常分类与恢复动作（待实现）
+   │  │  └─ trace/              #   结构化日志、截图落盘（待实现）
+   │  ├─ game/                  # 与阴阳师相关（待实现）
+   │  │  ├─ pages/              #   一屏一个文件
+   │  │  └─ flows/              #   业务流程
+   │  ├─ assets/                # 模板图与清单（待创建）
+   │  ├─ configs/               # instances / device / tasks（待创建）
+   │  ├─ tests/                 # 回归与单元测试（待创建）
+   │  ├─ tools/                 # 开发期命令（已实现 doctor）
+   │  └─ artifacts/             # 运行产物（不纳入版本控制）
+   └─ temp_scripts/             # 一次性探测脚本（不纳入版本控制）
 ```
+
+### 4.1 约定
+
+- **所有命令都在 `program/backend` 下执行**，统一写成 `python -m tools.xxx`。
+  用 `-m` 而不是 `python tools\xxx.py`，是为了让项目根进入 `sys.path`，`import core` 才成立。
+- **虚拟环境**就在同一层：`program/backend/.venv`。
+- **`.project-root` 不要删**：`paths.py` 靠它认定代码根。之所以不用 `.git`（在仓库根，
+  比代码根高两层）或 `requirements.txt`，是为了让代码根的判定只依赖这一个显式标记。
+- **不做 `app/` 这一层**：backend 本身就是那个应用，多一层只是多敲字符。
 
 ---
 
