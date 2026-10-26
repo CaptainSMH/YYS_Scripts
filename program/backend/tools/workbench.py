@@ -401,12 +401,29 @@ class Workbench:
         page = ask_page(self.root)
         if not page:
             return
+        if not paths.is_valid_segment(page):
+            messagebox.showerror(
+                "页面名不合法",
+                f"「{page}」不能做文件夹名。\n只允许字母、数字、下划线、横线，"
+                "例如 home、guild、soul。",
+                parent=self.root,
+            )
+            return
+
         element = simpledialog.askstring(
             "元素命名", f"页面「{page}」里这个元素叫什么？（如 explore）", parent=self.root
         )
         if not element:
             return
         element = element.strip()
+        if not paths.is_valid_segment(element):
+            messagebox.showerror(
+                "元素名不合法",
+                f"「{element}」不能做文件名。\n只允许字母、数字、下划线、横线，"
+                "例如 explore、shop_entry。",
+                parent=self.root,
+            )
+            return
 
         if templates.find(f"{page}/{element}") is not None:
             if not messagebox.askyesno(

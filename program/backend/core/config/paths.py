@@ -13,8 +13,11 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
+
+from core.config.errors import ConfigError
 
 # 用来判定项目根的标记文件：只认 app 目录里的这个文件
 _ROOT_MARKER = ".project-root"
@@ -44,8 +47,26 @@ PAGES_DIR: Path = ASSETS_DIR / "pages"
 """一个画面（页面）一个文件夹：模板图与 templates.yaml 都在里面。"""
 
 
+SEGMENT_PATTERN = re.compile(r"^[A-Za-z0-9_\-]+$")
+"""页面名、元素名允许的字符：字母、数字、下划线、横线。
+
+限制得这么死是因为它们直接变成文件夹名和文件名。
+放行中文虽然可行，但路径、日志、代码引用里都会出现中文，排查时容易看花眼。
+"""
+
+
+def is_valid_segment(name: str) -> bool:
+    """页面名/元素名是否合法（单段、只含字母数字下划线横线）。"""
+    return bool(name) and bool(SEGMENT_PATTERN.match(name))
+
+
 def page_dir(page: str) -> Path:
     """某个页面的资源目录：assets/pages/<page>/"""
+    if not is_valid_segment(page):
+        # 兜底：就算调用方忘了校验，也不允许拼出 ../ 这种路径
+        raise ConfigError(
+            f"页面名不合法：{page!r}，只允许字母、数字、下划线、横线"
+        )
     return PAGES_DIR / page
 
 # ---------------------------------------------------------------- 配置

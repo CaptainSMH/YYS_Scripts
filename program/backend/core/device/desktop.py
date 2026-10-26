@@ -59,6 +59,9 @@ ASPECT_TOLERANCE = 0.0  # 0 = 只要不是精确 16:9 就调整
 # 浮点保护：800/450 与 16/9 可能差最后一个二进制位，不能因此误判并反复调整
 _ASPECT_EPSILON = 1e-6
 
+# 比例不对时强制调整到的尺寸。和模板采集分辨率保持一致。
+TARGET_CLIENT_SIZE = (1280, 720)
+
 logger = logging.getLogger(__name__)
 
 
@@ -259,7 +262,13 @@ class DesktopDevice(Device):
     # ---- 比例校正 ----
 
     def _ensure_aspect(self) -> None:
-        """客户区不是 16:9 时按需调整窗口。
+        """客户区不是 16:9 时，直接强制改成 1280×720。
+
+        为什么固定成 1280×720 而不是「保持高度、按比例算宽度」：
+            按高度算宽度要做整数取整，而只有高度能被 9 整除时才能精确凑出
+            16:9。凑不出来的高度会「窗口已经被改过、然后校验失败报错」，
+            属于副作用已发生却当失败处理的坏形态。
+            统一到 1280×720 既避免取整问题，也和模板采集分辨率一致。
 
         容差由 ASPECT_TOLERANCE 控制；设为 0 时，只要比例不是精确 16:9 就会调整。
         浮点比较留了 1e-6 的保护，避免 800x450 这种"本该相等"的尺寸被反复调整。
@@ -281,15 +290,14 @@ class DesktopDevice(Device):
         if not self._fix_aspect:
             raise DeviceError(message)
 
-        target_width = round(height * TARGET_ASPECT)
-        logger.warning("%s，正在调整为 %dx%d", message, target_width, height)
-        resize_client(self._info.hwnd, target_width, height)
+        target_width, target_height = TARGET_CLIENT_SIZE
+        logger.warning("%s，正在调整为 %dx%d", message, target_width, target_height)
+        resize_client(self._info.hwnd, target_width, target_height)
 
         new_width, new_height = _client_size(self._info.hwnd)
-        new_ratio = new_width / new_height if new_height else 0
-        if abs(new_ratio - TARGET_ASPECT) / TARGET_ASPECT > tolerance:
+        if (new_width, new_height) != (target_width, target_height):
             raise DeviceError(
-                f"调整窗口比例失败：目标 {target_width}x{height}，"
+                f"调整窗口尺寸失败：目标 {target_width}x{target_height}，"
                 f"实际 {new_width}x{new_height}"
             )
         logger.warning("窗口已调整为 %dx%d", new_width, new_height)
