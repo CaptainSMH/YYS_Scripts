@@ -4,3 +4,6 @@ temp_scripts/
 # Python 运行缓存（每次运行自动生成，不应入库）
 __pycache__/
 *.py[cod]
+
+# 运行产物：日志、失败截图、调试抓图
+artifacts/
