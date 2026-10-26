@@ -356,7 +356,7 @@ class DesktopDevice(Device):
 
     # ---- 输入 ----
 
-    def tap(self, x: int, y: int) -> None:
+    def tap(self, x: int, y: int, hold_ms: int = 0) -> None:
         self._require_elevated("后台点击")
         hwnd = self._require_window()
         width, height = _client_size(hwnd)
@@ -365,6 +365,9 @@ class DesktopDevice(Device):
 
         self._post(WM_MOUSEMOVE, 0, x, y)
         self._post(WM_LBUTTONDOWN, MK_LBUTTON, x, y)
+        if hold_ms > 0:
+            # 按住一段时间再抬起：真实的点击不是 0 毫秒
+            time.sleep(hold_ms / 1000)
         self._post(WM_LBUTTONUP, 0, x, y)
 
     def swipe(self, x1: int, y1: int, x2: int, y2: int, duration_ms: int = 300) -> None:

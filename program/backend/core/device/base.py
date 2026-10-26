@@ -51,8 +51,12 @@ class Device(ABC):
         """
 
     @abstractmethod
-    def tap(self, x: int, y: int) -> None:
-        """在客户区坐标 (x, y) 处点击一次。"""
+    def tap(self, x: int, y: int, hold_ms: int = 0) -> None:
+        """在客户区坐标 (x, y) 处点击一次。
+
+        hold_ms 是按下到抬起之间停留的毫秒数。
+        真实鼠标点击大约 50~150 毫秒；传 0 表示按下立刻抬起（脚本特征明显）。
+        """
 
     @abstractmethod
     def swipe(self, x1: int, y1: int, x2: int, y2: int, duration_ms: int = 300) -> None:
