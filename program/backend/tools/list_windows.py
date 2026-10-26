@@ -24,16 +24,23 @@ def pad(text: str, width: int) -> str:
 def render_table(windows: list[WindowInfo]) -> list[str]:
     """把窗口列表渲染成对齐的文本行。"""
     lines = [
-        pad("序号", 6) + pad("角色", 18) + pad("服务器", 16) + pad("客户区", 12) + "状态"
+        pad("序号", 6)
+        + pad("角色", 18)
+        + pad("服务器", 16)
+        + pad("客户区", 12)
+        + pad("屏幕位置", 16)
+        + "状态"
     ]
-    lines.append("-" * 64)
+    lines.append("-" * 84)
     for index, info in enumerate(windows):
         state = "已最小化" if info.minimized else "正常"
+        x, y = info.position
         lines.append(
             pad(str(index), 6)
             + pad(info.role, 18)
             + pad(info.server, 16)
             + pad(f"{info.client[0]}x{info.client[1]}", 12)
+            + pad(f"({x}, {y})", 16)
             + state
         )
     return lines

@@ -47,7 +47,8 @@ TEMPLATES_YAML: Path = ASSETS_DIR / "templates.yaml"
 
 CONFIGS_DIR: Path = PROJECT_ROOT / "configs"
 DEVICE_YAML: Path = CONFIGS_DIR / "device.yaml"
-INSTANCES_YAML: Path = CONFIGS_DIR / "instances.yaml"
+INSTANCES_DIR: Path = CONFIGS_DIR / "instances"
+"""每个实例一个 yaml，文件名即实例名。"""
 TASKS_YAML: Path = CONFIGS_DIR / "tasks.yaml"
 
 # ---------------------------------------------------------------- 运行产物与测试

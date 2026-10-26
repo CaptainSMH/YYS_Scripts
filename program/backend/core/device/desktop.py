@@ -98,6 +98,8 @@ class WindowInfo:
     exe: str
     client: tuple[int, int]
     minimized: bool
+    position: tuple[int, int] = (0, 0)
+    """窗口左上角在屏幕上的坐标，用于把序号和屏幕上的位置对上。"""
 
     @property
     def role(self) -> str:
@@ -172,6 +174,7 @@ def list_game_windows() -> list[WindowInfo]:
         exe = process_name(pid)
         if exe.rsplit(".", 1)[0].lower() != GAME_PROCESS:
             continue
+        left, top, _right, _bottom = win32gui.GetWindowRect(hwnd)
         found.append(
             WindowInfo(
                 hwnd=hwnd,
@@ -180,15 +183,12 @@ def list_game_windows() -> list[WindowInfo]:
                 exe=exe,
                 client=_client_size(hwnd),
                 minimized=bool(win32gui.IsIconic(hwnd)),
+                position=(left, top),
             )
         )
 
-    # 多开时标题可能完全相同，按屏幕位置排序让编号稳定
-    def position(hwnd: int) -> tuple[int, int]:
-        left, top, _right, _bottom = win32gui.GetWindowRect(hwnd)
-        return top, left
-
-    found.sort(key=lambda info: position(info.hwnd))
+    # 多开时标题可能完全相同，按屏幕位置排序让编号稳定（先上后下、先左后右）
+    found.sort(key=lambda info: (info.position[1], info.position[0]))
     return found
 
 
