@@ -1,0 +1,25 @@
+# 页面 home 的模板清单，由 python -m tools.workbench 生成
+explore:
+  file: explore.png
+  note: 庭院中央的探索灯笼
+  roi: [0.4688, 0.1014, 0.593, 0.3222]
+  since: '2026-10-27'
+  threshold: 0.85
+friends:
+  file: friends.png
+  note: ''
+  roi: [0.6383, 0.825, 0.7789, 1.0]
+  since: ''
+  threshold: 0.95
+shikigami_entry:
+  file: shikigami_entry.png
+  note: ''
+  roi: [0.8078, 0.8222, 0.9609, 1.0]
+  since: '2026-10-27'
+  threshold: 0.95
+shop:
+  file: shop.png
+  note: ''
+  roi: [0.4617, 0.8208, 0.6055, 1.0]
+  since: ''
+  threshold: 0.95

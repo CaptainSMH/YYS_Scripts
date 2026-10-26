@@ -40,8 +40,13 @@ TOOLS_DIR: Path = PROJECT_ROOT / "tools"
 # ---------------------------------------------------------------- 资源
 
 ASSETS_DIR: Path = PROJECT_ROOT / "assets"
-TEMPLATES_DIR: Path = ASSETS_DIR / "templates"
-TEMPLATES_YAML: Path = ASSETS_DIR / "templates.yaml"
+PAGES_DIR: Path = ASSETS_DIR / "pages"
+"""一个画面（页面）一个文件夹：模板图与 templates.yaml 都在里面。"""
+
+
+def page_dir(page: str) -> Path:
+    """某个页面的资源目录：assets/pages/<page>/"""
+    return PAGES_DIR / page
 
 # ---------------------------------------------------------------- 配置
 
