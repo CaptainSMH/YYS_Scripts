@@ -10,3 +10,6 @@ artifacts/
 
 # 工作区规则文件：仅本地生效，不进仓库
 AGENTS.md
+
+# 本机窗口绑定（含角色名，换机器需重新生成）
+instances.yaml
