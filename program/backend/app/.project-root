@@ -1,0 +1,2 @@
+# 项目根标记：core/config/paths.py 靠这个文件定位 app 目录。
+# 不要删除。它比 .git 更精确——.git 在仓库根，而代码根是 program/backend/app。

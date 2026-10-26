@@ -2,8 +2,13 @@
 
 所有模块都从这里取路径，不要在别处硬编码或自己拼相对路径。
 
-项目根是通过「从本文件向上查找 .git 或 requirements.txt」得到的，
+项目根是通过「从本文件向上查找 `.project-root` 标记文件」得到的，
 所以无论从哪个目录运行、项目被挪到哪里，结果都一致。
+
+为什么不用 `.git` 或 `requirements.txt` 当标记：
+    `.git` 在仓库根（program/backend/app 的上面好几层），
+    `requirements.txt` 在 program/backend（也在 app 之上），
+    两者都会把代码根认成错误的目录。所以用 app 自己的标记文件。
 """
 
 from __future__ import annotations
@@ -11,17 +16,17 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-# 用来判定项目根的标记文件（命中任意一个即可）
-_ROOT_MARKERS = (".git", "requirements.txt")
+# 用来判定项目根的标记文件：只认 app 目录里的这个文件
+_ROOT_MARKER = ".project-root"
 
 
 def _find_root(start: Path) -> Path:
     for parent in (start, *start.parents):
-        if any((parent / marker).exists() for marker in _ROOT_MARKERS):
+        if (parent / _ROOT_MARKER).exists():
             return parent
     raise RuntimeError(
-        f"找不到项目根目录：从 {start} 向上未发现 {_ROOT_MARKERS}，"
-        "请确认项目结构完整"
+        f"找不到项目根目录：从 {start} 向上未发现 {_ROOT_MARKER} 标记文件，"
+        "请确认 program/backend/app/.project-root 是否存在"
     )
 
 
