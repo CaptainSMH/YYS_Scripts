@@ -170,12 +170,14 @@ def remove(page: str, name: str) -> bool:
 # ---------------------------------------------------------------- 查询
 
 def list_pages() -> list[str]:
-    """所有已有清单的页面名。"""
+    """所有页面文件夹，**包括还空着的**。
+
+    空文件夹也算一个页面，否则你手动建好目录却在下拉里看不到，
+    只能靠猜着输入名字，很别扭。
+    """
     if not paths.PAGES_DIR.exists():
         return []
-    return sorted(
-        child.name for child in paths.PAGES_DIR.iterdir() if (child / MANIFEST_NAME).exists()
-    )
+    return sorted(child.name for child in paths.PAGES_DIR.iterdir() if child.is_dir())
 
 
 def list_all() -> list[Template]:

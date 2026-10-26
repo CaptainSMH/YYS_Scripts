@@ -1,4 +1,4 @@
-﻿"""模板工作台：截图、框选生成模板、核对/调整 roi，全在一个窗口里完成。
+"""模板工作台：截图、框选生成模板、核对/调整 roi，全在一个窗口里完成。
 
 用法（PyCharm 里直接运行本文件即可，不需要命令行参数）：
     python -m tools.workbench
@@ -153,11 +153,14 @@ class Workbench:
         list_frame = ttk.Frame(right)
         list_frame.pack(fill="both", expand=True, padx=6)
         scroll = ttk.Scrollbar(list_frame, orient="vertical")
-        self.listbox = tk.Listbox(list_frame, yscrollcommand=scroll.set, exportselection=False)
-        scroll.config(command=self.listbox.yview)
+        self.tree = ttk.Treeview(
+            list_frame, show="tree", selectmode="browse", yscrollcommand=scroll.set
+        )
+        scroll.config(command=self.tree.yview)
         scroll.pack(side="right", fill="y")
-        self.listbox.pack(side="left", fill="both", expand=True)
-        self.listbox.bind("<<ListboxSelect>>", self.on_select_template)
+        self.tree.pack(side="left", fill="both", expand=True)
+        self.tree.bind("<<TreeviewSelect>>", self.on_select_template)
+        self._items: dict[str, templates.Template] = {}
 
         self.info = ttk.Label(right, text="", justify="left", anchor="w", wraplength=300)
         self.info.pack(fill="x", padx=6, pady=8)
@@ -182,11 +185,30 @@ class Workbench:
             self.status.config(text="没有实例配置，请先运行 tools.pick_window")
 
     def refresh_templates(self) -> None:
-        self.listbox.delete(0, "end")
-        self.template_items = templates.list_all()
-        for item in self.template_items:
-            self.listbox.insert("end", item.key)
-        self.status.config(text=f"共 {len(self.template_items)} 个模板")
+        """按页面分组重建树：第一层是页面文件夹，展开才是模板。"""
+        self.tree.delete(*self.tree.get_children())
+        self._items = {}
+
+        pages = templates.list_pages()
+        for page in pages:
+            members = sorted(templates.load_page(page), key=lambda t: t.name)
+            node = self.tree.insert(
+                "", "end", iid=f"page::{page}", text=f"{page}  ({len(members)})", open=True
+            )
+            for item in members:
+                iid = f"tpl::{item.key}"
+                self.tree.insert(node, "end", iid=iid, text=item.name)
+                self._items[iid] = item
+
+        self.status.config(text=f"{len(pages)} 个页面，共 {len(self._items)} 个模板")
+
+    def select_template(self, key: str) -> None:
+        """在树里选中某个模板并加载它。"""
+        iid = f"tpl::{key}"
+        if iid in self._items:
+            self.tree.selection_set(iid)
+            self.tree.see(iid)
+            self.on_select_template()
 
     def _current_instance(self) -> instances.Instance | None:
         name = self.instance_var.get()
@@ -334,10 +356,14 @@ class Workbench:
     # ---------------------------------------------------------------- 列表
 
     def on_select_template(self, _event=None) -> None:
-        selection = self.listbox.curselection()
+        selection = self.tree.selection()
         if not selection:
             return
-        item = self.template_items[selection[0]]
+        item = self._items.get(selection[0])
+        if item is None:
+            # 选中的是页面节点，不是模板
+            self.status.config(text="（这是页面文件夹，展开选里面的模板）")
+            return
         image = cv2.imdecode(np.fromfile(str(item.image_path), np.uint8), cv2.IMREAD_COLOR)
         if image is None:
             messagebox.showerror("读图失败", f"找不到模板图：{item.image_path}", parent=self.root)
@@ -417,6 +443,7 @@ class Workbench:
             return
 
         self.refresh_templates()
+        self.select_template(item.key)
         self.status.config(
             text=f"已保存 {item.key}  采样 {len(scores)} 帧  最低 {lowest:.3f}  阈值 {threshold}"
         )
