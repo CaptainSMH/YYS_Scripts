@@ -3,10 +3,9 @@
 流程层只跟它打交道，不直接碰截图、匹配、坐标：
 
     ctx = Session(device)
+    ctx.require(HomePage)          # 确认停在主界面，不在就报错
     ctx.tap(HomePage.GUILD)        # 找到按钮并点击
-    ctx.expect(GuildPage, 8)       # 等阴阳寮界面出现
-    ctx.back()                     # 点当前页面的返回键
-    ctx.goto(HomePage)             # 一路返回，直到回到主界面
+    ctx.expect(GuildPage)          # 等阴阳寮界面出现（默认等 1 秒）
 
 设计要点：
     · 所有等待都是「条件等待 + 轮询」，没有固定 sleep
@@ -18,12 +17,11 @@ from __future__ import annotations
 
 import time
 
-import cv2
 import numpy as np
 
 from core.config import templates
 from core.config.errors import TemplateImageMissing, TemplateMissing, TemplateRoiInvalid
-from core.device.base import Device, DeviceError
+from core.device.base import Device
 from core.humanize import point_in_box
 from core.humanize import hold as humanize_hold
 from core.humanize.timing import DEFAULT_HOLD
@@ -32,6 +30,7 @@ from core.page import registry
 from core.page.base import El, Page
 from core.page.registry import PageMatch
 from core.vision import match
+from core.vision.io import load_image
 
 DEFAULT_TIMEOUT = 1.0
 """expect / wait_any 的默认超时（秒）。
@@ -59,11 +58,10 @@ class ElementNotFound(SessionError):
     hint = "模板和画面不一致：可能不在这个界面、换了皮肤，或窗口尺寸变了"
 
 
-def _load_image(path) -> np.ndarray | None:
-    data = np.fromfile(str(path), np.uint8)
-    if data.size == 0:
-        return None
-    return cv2.imdecode(data, cv2.IMREAD_COLOR)
+class WrongPage(SessionError):
+    """当前页面不是流程预期的那个。"""
+
+    hint = "先手动切到该界面；或者让流程自己走回去再继续"
 
 
 def owner_page(element: El) -> type[Page]:
@@ -107,6 +105,18 @@ class Session:
         return registry.detect(frame if frame is not None else self.shot())
 
     # ---------------------------------------------------------------- 页面
+
+    def require(self, page_cls: type[Page]) -> PageMatch:
+        """确认当前就在这个页面；不是就抛 WrongPage。
+
+        流程开头用它声明前置条件：
+            ctx.require(HomePage)     # 不在主界面就直接失败，而不是去点主界面的按钮
+        """
+        found = self.detect()
+        if found is None or found.page is not page_cls:
+            current = found.key if found is not None else "未知界面"
+            raise WrongPage(f"需要先停在 {page_cls.key}，当前是 {current}")
+        return found
 
     def expect(self, page_cls: type[Page], timeout: float | None = None) -> PageMatch:
         """等到出现这个页面；超时抛 PageTimeout。"""
@@ -165,7 +175,7 @@ class Session:
         if item is None:
             raise TemplateMissing(f"模板清单里没有 {key}")
 
-        image = _load_image(item.image_path)
+        image = load_image(item.image_path)
         if image is None:
             raise TemplateImageMissing(f"读不出模板图：{item.image_path}")
 

@@ -3,8 +3,8 @@
 这是最小的一条完整链路：找到按钮 → 点击 → 等界面出现。
 用来验证设备、识别、页面、会话四层能不能串起来。
 
-前置条件：必须停在主界面。如果不在，会先报「按钮没找到」，
-而不是乱点——点击坐标永远来自匹配结果，从不猜。
+前置条件：必须停在主界面。流程开头用 ctx.require(HomePage) 声明这一点——
+不在主界面就直接失败，并说明当前在哪个界面，而不是去点主界面的按钮。
 """
 
 from __future__ import annotations
@@ -16,6 +16,8 @@ from game.pages.home import HomePage
 
 def run(ctx: Session) -> None:
     """点主界面的「阴阳寮」，然后等阴阳寮界面出现。"""
+    ctx.require(HomePage)
+
     print("  点「阴阳寮」…")
     x, y = ctx.tap(HomePage.GUILD)
     print(f"  点击坐标 ({x}, {y})")
