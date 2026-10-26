@@ -3,3 +3,5 @@
 numpy==2.5.4
 opencv-python-headless==5.0.0.93
 pyyaml==6.0.3
+pywin32==312
+psutil==7.2.2
