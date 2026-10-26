@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from game.pages.guild import GuildPage  # noqa: F401  注册用
 from game.pages.home import HomePage  # noqa: F401  注册用
 
-__all__ = ["HomePage"]
+__all__ = ["GuildPage", "HomePage"]

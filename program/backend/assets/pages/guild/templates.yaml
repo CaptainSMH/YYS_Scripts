@@ -1,0 +1,19 @@
+# 页面 guild 的模板清单，由 python -m tools.workbench 生成
+back:
+  file: back.png
+  note: ''
+  roi: [0.0, 0.0, 0.1125, 0.1819]
+  since: ''
+  threshold: 0.95
+barrier:
+  file: barrier.png
+  note: ''
+  roi: [0.7867, 0.8458, 0.9273, 1.0]
+  since: ''
+  threshold: 0.95
+info:
+  file: info.png
+  note: ''
+  roi: [0.857, 0.8472, 1.0, 1.0]
+  since: ''
+  threshold: 0.95

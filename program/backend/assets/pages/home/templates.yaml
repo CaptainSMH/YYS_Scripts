@@ -11,6 +11,12 @@ friends_entry:
   roi: [0.6383, 0.825, 0.7789, 1.0]
   since: ''
   threshold: 0.95
+guild_entry:
+  file: guild_entry.png
+  note: ''
+  roi: [0.3695, 0.8222, 0.5188, 1.0]
+  since: ''
+  threshold: 0.95
 shikigami_entry:
   file: shikigami_entry.png
   note: ''

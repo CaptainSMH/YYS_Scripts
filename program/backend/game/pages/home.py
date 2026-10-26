@@ -28,6 +28,7 @@ class HomePage(Page):
     SHIKIGAMI = El("shikigami_entry", "式神录")
     FRIENDS = El("friends_entry", "好友")
     SHOP = El("shop_entry", "商店")
+    GUILD = El("guild_entry", "阴阳寮")
 
     # 画面上方
     EXPLORE = El("explore", "探索灯笼")
