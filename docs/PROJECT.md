@@ -148,21 +148,23 @@ YYS_Scripts/                    # 仓库根（.git 在这里）
    │  ├─ .project-root          # 根标记：paths.py 靠它定位，勿删
    │  ├─ .venv/                 # 虚拟环境（不纳入版本控制）
    │  ├─ requirements.txt       # 依赖清单
+   │  ├─ .project-root          # 代码根标记（paths.py 靠它）
    │  ├─ core/                  # 与游戏无关
-   │  │  ├─ config/             #   路径解析（已实现）
-   │  │  ├─ device/             #   base（接口）/ desktop（Windows 实现）
-   │  │  ├─ vision/             #   模板匹配、OCR（待实现）
-   │  │  ├─ page/               #   页面基类、元素、注册表（待实现）
-   │  │  ├─ session/            #   ctx API（待实现）
-   │  │  ├─ recovery/           #   异常分类与恢复动作（待实现）
-   │  │  └─ trace/              #   结构化日志、截图落盘（待实现）
-   │  ├─ game/                  # 与阴阳师相关（待实现）
-   │  │  ├─ pages/              #   一屏一个文件
-   │  │  └─ flows/              #   业务流程
-   │  ├─ assets/                # 模板图与清单（待创建）
-   │  ├─ configs/               # instances / device / tasks（待创建）
-   │  ├─ tests/                 # 回归与单元测试（待创建）
-   │  ├─ tools/                 # 开发期命令（已实现 doctor）
+   │  │  ├─ config/             #   paths / instances / templates / errors
+   │  │  ├─ device/             #   base（接口）/ desktop（pywin32 实现）
+   │  │  ├─ vision/             #   roi / match / io（读图写图）/ quality
+   │  │  ├─ page/               #   Page 基类、El 元素、注册表与路由
+   │  │  ├─ session/            #   Session（shot/detect/require/expect/wait_any/locate/tap）
+   │  │  └─ humanize/           #   拟人化：点击位置、按压时长
+   │  ├─ game/                  # 与阴阳师相关
+   │  │  ├─ pages/              #   一屏一个文件（home / guild）
+   │  │  └─ flows/              #   业务流程（enter_guild）
+   │  ├─ assets/                # 模板图与清单，按页面分文件夹
+   │  │  └─ pages/<页面>/       #   templates.yaml + 模板 png
+   │  ├─ configs/               # 实例配置（一实例一文件）
+   │  │  └─ instances/          #   <实例名>.yaml（不纳入版本控制）
+   │  ├─ tools/                 # 开发期与运行用命令（见 8 节）
+   │  ├─ tests/                 # 回归与单元测试（尚未创建）
    │  └─ artifacts/             # 运行产物（不纳入版本控制）
    └─ temp_scripts/             # 一次性探测脚本（不纳入版本控制）
 ```
@@ -197,7 +199,7 @@ YYS_Scripts/                    # 仓库根（.git 在这里）
 1. 枚举所有顶层窗口，过滤：无标题、不可见、面积过小。
 2. 打印列表：`序号 | 窗口标题 | 进程名 | 客户区尺寸`。
 3. 用户选择序号。
-4. 保存到 `instances.yaml`：`title_match`（包含匹配）+ `match_index`（第几个匹配）。
+4. 保存到 `configs/instances/<实例名>.yaml`：`title_match`（包含匹配）+ `match_index`（第几个匹配）。
 5. 下次启动按此规则查找；找不到则报错退出，不自动猜。
 
 **为什么不用句柄或 PID**：两者每次启动都会变。标题相对稳定，但可能带版本号或账号名，所以用**包含匹配**；多开时标题可能完全相同，靠 `match_index` 区分。
@@ -274,14 +276,16 @@ YYS_Scripts/                    # 仓库根（.git 在这里）
 
 | API | 语义 |
 |---|---|
-| `tap(element)` | 找到元素并点击；找不到抛异常 |
-| `expect(page, timeout)` | 等待出现某页面；超时抛异常并留证据 |
-| `wait_any([pages], timeout)` | 等任意一个出现，返回命中的页面 |
-| `goto(page)` | 不管当前在哪，设法到达 |
-| `text(element)` | 读取文字/数字，失败返回"未知" |
-| `seen(page)` | 当前是否为某页面（不等待） |
-| `back()` / `home()` | 返回上级 / 回主界面 |
-| `tap_until_gone(element)` | 反复点击直到元素消失 |
+| `shot()` | 抓一帧当前画面 |
+| `detect()` | 当前是哪个页面；认不出返回 None |
+| `require(page)` | 确认就在这个页面，不在就抛 WrongPage |
+| `expect(page, timeout)` | 等到出现某页面；超时抛异常并说明当前页面 |
+| `wait_any(*pages, timeout)` | 等任意一个出现，返回命中的页面 |
+| `locate(element)` | 找到元素，返回中心坐标和得分；不点击 |
+| `tap(element)` | 找到元素并点击（位置与按压时长都是随机的）|
+
+刻意**不提供**的组合：`goto` / `back` / `seen` / `text` —— 能由上面这些拼出来的就不单独写。
+需要「点哪个」就用 `tap`，需要「等到哪」就用 `expect` / `wait_any`。
 
 **关键设计**
 
@@ -351,36 +355,57 @@ YYS_Scripts/                    # 仓库根（.git 在这里）
 
 ## 7. 数据与配置
 
-### 7.1 模板清单 `assets/templates.yaml`
+### 7.1 模板清单 `assets/pages/<页面>/templates.yaml`
+
+每个界面一个文件夹，模板图和它的清单放在一起：
+
+```
+assets/pages/home/
+├─ templates.yaml
+├─ explore.png
+└─ guild_entry.png
+```
 
 | 字段 | 必填 | 说明 |
 |---|---|---|
-| `file` | 是 | 相对 `assets/` 的路径 |
+| `file` | 是 | 相对所在页面文件夹的路径（通常就是 `<元素名>.png`）|
 | `roi` | 是 | 归一化搜索区域，限定范围提速并降低误匹配 |
 | `threshold` | 是 | 实测得分下浮后的值 |
-| `since` | 是 | 最后验证通过的日期/游戏版本 |
+| `since` | 否 | 最后验证通过的日期/游戏版本 |
 | `note` | 否 | 对应什么按钮 |
 
-**不在清单里的图不允许被引用**（启动时校验）。
+页面里有哪些元素、哪些是锚点，写在代码里（`game/pages/<页面>.py`）；
+清单只放会随游戏更新变化的参数。两者是否对得上由 `python -m tools.check_pages` 检查。
 
-### 7.2 实例配置 `configs/instances.yaml`
+页面名与元素名只允许字母、数字、下划线、横线——它们直接变成文件夹名和文件名。
+
+### 7.2 实例配置 `configs/instances/<实例名>.yaml`
+
+一个实例一个文件，文件名就是实例名。
 
 | 字段 | 说明 |
 |---|---|
-| `name` | 实例名，用于日志目录 |
-| `title_match` | 窗口标题的包含匹配串 |
-| `match_index` | 第几个匹配窗口（多开时区分） |
-| `tasks` | 该实例要跑的任务列表（可与其他实例不同） |
+| `title_match` | 窗口标题的包含匹配串（通常就是角色名）|
+| `match_index` | 同名窗口里的第几个（多开时区分）|
+| `client` | 绑定时记录的客户区尺寸，仅供显示，可能已过时 |
 
-启动时用 `--instance <name>` 选择。
+启动时用 `--instance <name>` 选择；只有一个配置时可省略。
 
-### 7.3 设备配置 `configs/device.yaml`
+### 7.3 设备参数
 
-逻辑分辨率、宽高比容差、`click_mode`（background/foreground）、重试次数、超时基线。
+目前没有独立的设备配置文件，参数都是 `core/device/desktop.py` 里的常量：
 
-### 7.4 任务配置 `configs/tasks.yaml`
+| 常量 | 当前值 | 含义 |
+|---|---|---|
+| `TARGET_ASPECT` | 16/9 | 客户区应有的宽高比 |
+| `ASPECT_TOLERANCE` | 0.0 | 偏差容忍度；0 表示不是精确 16:9 就调整 |
+| `TARGET_CLIENT_SIZE` | 1280×720 | 比例不对时强制改成的尺寸，与模板采集分辨率一致 |
+| `TITLE_SEPARATOR` | `" · "` | 窗口标题里「角色 · 服务器」的分隔符 |
+| `GAME_PROCESS` | `onmyoji` | 判定游戏窗口用的进程名（不含扩展名）|
 
-任务列表、次数、停止条件。加任务、改次数只改这里。
+### 7.4 任务配置
+
+尚未实现。任务列表、次数、停止条件将来放 `configs/tasks.yaml`。
 
 ---
 
@@ -409,12 +434,13 @@ artifacts/
 
 | 层级 | 方式 | 验证什么 |
 |---|---|---|
-| 单元测试 | 纯函数 | 坐标换算、宽高比校验、阈值比较 |
-| 回归测试 | 历史截图 | 每张截图应被识别为预期页面 |
-| 流程测试 | mock 设备回放帧 | 完整流程的动作序列是否正确 |
-| 设备测试 | `tools/diagnose.py` | 截图是否有效、点击是否生效 |
+| 单元测试 | 纯函数（`core/vision`、`core/humanize`）| 坐标换算、阈值比较、随机分布 |
+| 回归测试 | 历史截图 + `tools/whereami --file` | 每张截图应被识别为预期页面 |
+| 流程测试 | 假设备回放帧 | 完整流程的动作序列是否正确 |
+| 设备测试 | `tools/doctor.py` | 解释器/依赖/路径/管理员权限是否就绪 |
 
 **回归测试是维护性的核心**：`tests/screens/<分辨率>/` 存各分辨率截图，游戏更新后跑一次即可定位失效模板。
+（`tests/` 目录尚未创建，目前靠 `tools/whereami --file` 手工验证历史截图。）
 
 **约定**：改动涉及识别 / 页面 / 流程，必须跑回归并给出结果；不接受「真机跑一遍没报错」作为验证依据。
 
@@ -424,13 +450,14 @@ artifacts/
 
 ## 10. 版本适配 SOP（游戏更新后）
 
-1. 任务报错 → 去 `artifacts/<日期>/<实例>/` 找失败截图。
-2. 跑 `pytest tests/`，看哪些页面识别挂了。
-3. 用 `tools/annotate.py` 重截失效模板，更新 `templates.yaml` 与 `since`。
-4. 布局整体变化 → 改对应 `game/pages/*.py`。
-5. 流程变化（新增确认弹窗、步骤增减）→ 改 `game/flows/*.py`。
-6. `CHANGELOG.md` 记一条：改了哪个界面、哪张图、为什么。
-7. 重跑回归 + 真机验证。
+1. 任务报错 → 看运行器窗口里的「原因 + 建议」，或去 `artifacts/` 找失败截图。
+2. 跑 `python -m tools.check_pages`：引用的模板是否还存在、图片是否缺失、有没有纯色模板。
+3. 跑 `python -m tools.whereami --instance <名字>`：哪些模板得分掉了。
+4. 用 `tools/workbench.py` 修：选中模板看匹配位置，或重新框选保存；必要时更新 `since`。
+5. 布局整体变化 → 改对应 `game/pages/*.py`。
+6. 流程变化（新增确认弹窗、步骤增减）→ 改 `game/flows/*.py`。
+7. `CHANGELOG.md` 记一条：改了哪个界面、哪张图、为什么。
+8. 重跑检查 + 真机验证。
 
 **判据**：一次更新需要改 `flows/`，说明是玩法变化而非普通 UI 更新，要额外补回归样本。
 
@@ -441,11 +468,11 @@ artifacts/
 | 阶段 | 内容 | 验收标准 |
 |---|---|---|
 | **P0 可行性实验** | 枚举窗口 → 截图 → 后台点击 → 回读 | 半小时内得出「桌面版是否可行、点击用哪种模式」 |
-| **P1 工具** | `list_windows` / `pick_window` / `capture` / `annotate` / `whereami` | 能给任意截图报告页面；能框选生成模板 |
+| **P1 工具** | `list_windows` / `pick_window` / `capture` / `workbench` / `whereami` / `check_pages` / `doctor` | 能在工作台里截图、框选生成模板、核对 roi；能给任意截图报告命中情况 |
 | **P2 识别骨架** | 设备层 + 识别层 + 页面注册表 + 回归测试 | 正确识别 3 个以上界面；回归可跑 |
-| **P3 单任务闭环** | 会话 API + 流程 + 恢复 | 一个任务无人值守连跑 20 次不卡死 |
+| **P3 单任务闭环** | 会话层 + 流程 + 运行器 + 恢复 | 一个任务无人值守连跑 20 次不卡死 |
 | **P4 OCR** | 数值读取 + 精度验证 | 体力/次数读取 20 次一致率达标 |
-| **P5 多开** | `instances.yaml` + 启动脚本 + 窗口绑定验证 | 两个实例并行互不干扰，日志分开 |
+| **P5 多开** | 一实例一配置 + 启动脚本 + 窗口绑定验证 | 两个实例并行互不干扰，日志分开 |
 | **P6 MuMu 适配** | adb 设备后端 | 同一套页面/流程在模拟器上通过回归 |
 
 **顺序约束**
