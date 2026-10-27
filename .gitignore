@@ -5,6 +5,10 @@ temp_scripts/
 __pycache__/
 *.py[cod]
 
+# 虚拟环境：体积大、与具体机器绑定，不该入库
+# （不能只靠 venv 自己生成的 .gitignore，换工具建环境就失效）
+.venv/
+
 # 运行产物：日志、失败截图、调试抓图
 artifacts/
 
